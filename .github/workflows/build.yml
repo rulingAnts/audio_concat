@@ -43,7 +43,7 @@ jobs:
 
       # ── Python deps ────────────────────────────────────────────────────────
       - name: Install Python dependencies
-        run: pip install PySide6 pydub numpy pyinstaller pyyaml
+        run: pip install -r requirements.txt pyinstaller
 
       # ── ffmpeg + ffprobe ───────────────────────────────────────────────────
       # ffmpeg-static  → https://www.npmjs.com/package/ffmpeg-static
@@ -82,17 +82,28 @@ jobs:
 
       # ── Build ──────────────────────────────────────────────────────────────
 
-      # macOS: --windowed creates a proper .app bundle.
-      # Windows: --windowed suppresses the console window.
-      - name: Build — onefile (macOS + Windows)
-        if: runner.os != 'Linux'
+      # macOS: onedir so the app launches instantly (no extraction on startup).
+      # --windowed wraps the output in a proper .app bundle.
+      - name: Build — onedir + windowed (macOS)
+        if: runner.os == 'macOS'
+        run: >
+          python -m PyInstaller
+          --onedir --windowed --name concat
+          --add-data "bin:bin"
+          app.py
+
+      # Windows: onefile is the conventional single-exe distribution format.
+      # --windowed (--noconsole) suppresses the console window.
+      - name: Build — onefile + windowed (Windows)
+        if: runner.os == 'Windows'
         run: >
           python -m PyInstaller
           --onefile --windowed --name concat
           --add-data "bin:bin"
           app.py
 
-      # Linux: onedir mode gives a directory tree that appimagetool can wrap.
+      # Linux: onedir gives a directory tree that appimagetool can wrap.
+      # --windowed is a no-op on Linux and omitted to avoid Qt platform issues.
       # QT_QPA_PLATFORM=offscreen prevents Qt from trying to open a display
       # during PyInstaller's import analysis phase.
       - name: Build — onedir (Linux → AppImage)
