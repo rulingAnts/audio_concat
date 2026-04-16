@@ -15,8 +15,8 @@ try:
 except ImportError:
     _HAS_YAML = False
 
-from PySide6.QtCore import Qt, QThread, QKeySequence, Signal
-from PySide6.QtGui import QShortcut
+from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
