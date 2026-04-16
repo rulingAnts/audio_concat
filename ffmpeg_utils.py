@@ -5,11 +5,13 @@ Priority order:
   1. Bundled binary: <app_root>/bin/ffmpeg[.exe]
   2. System PATH
 
-Place platform-specific binaries inside the bin/ folder to have them
-bundled automatically by PyInstaller (add the folder to datas in your
-.spec file).  The bin/ folder ships empty — drop the binaries in before
-packaging.  System ffmpeg is used as a fallback while developing without
-bundled binaries.
+Place a static ffmpeg binary inside the bin/ folder to have it bundled
+automatically by PyInstaller (add the folder to datas in your .spec file).
+The bin/ folder ships empty — drop the binary in before packaging.
+System ffmpeg is used as a fallback while developing without a bundled binary.
+
+ffprobe is optional; the CI build intentionally omits it to keep the
+bundle size down.  pydub falls back gracefully when ffprobe is absent.
 """
 
 import shutil

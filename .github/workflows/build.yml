@@ -45,26 +45,24 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt pyinstaller
 
-      # ── ffmpeg + ffprobe ───────────────────────────────────────────────────
-      # ffmpeg-static  → https://www.npmjs.com/package/ffmpeg-static
-      # ffprobe-static → https://www.npmjs.com/package/ffprobe-static
-      # Both ship LGPL static binaries for darwin-arm64, linux-x64, win32-x64.
-      - name: Download ffmpeg + ffprobe (npm)
+      # ── ffmpeg ────────────────────────────────────────────────────────────
+      # ffmpeg-static → https://www.npmjs.com/package/ffmpeg-static
+      # Ships LGPL static binaries for darwin-arm64, linux-x64, win32-x64.
+      # ffprobe is intentionally omitted to keep the bundle size down;
+      # pydub falls back gracefully when ffprobe is absent.
+      - name: Download ffmpeg (npm)
         shell: bash
         run: |
-          npm install ffmpeg-static ffprobe-static
+          npm install ffmpeg-static
           node -e "
             var fs=require('fs'),path=require('path');
             var ext=process.platform==='win32'?'.exe':'';
             var ff=require('ffmpeg-static');
-            var fp=require('ffprobe-static').path;
             fs.mkdirSync('bin',{recursive:true});
-            [[ff,'ffmpeg'+ext],[fp,'ffprobe'+ext]].forEach(function(x){
-              var dst=path.join('bin',x[1]);
-              fs.copyFileSync(x[0],dst);
-              try{fs.chmodSync(dst,0o755);}catch(e){}
-              console.log(x[0],'->',dst);
-            });
+            var dst=path.join('bin','ffmpeg'+ext);
+            fs.copyFileSync(ff,dst);
+            try{fs.chmodSync(dst,0o755);}catch(e){}
+            console.log(ff,'->',dst);
           "
 
       # ── Linux system libs ──────────────────────────────────────────────────
