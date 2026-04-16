@@ -1,0 +1,199 @@
+name: Build portable app
+
+# Runs on every version tag (e.g. v1.2.3) and can be triggered manually.
+# Each matrix job builds one platform, bundles ffmpeg + ffprobe from npm's
+# ffmpeg-static / ffprobe-static packages, and uploads the artifact.
+# On tag pushes all three artifacts are attached to a GitHub Release.
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required by softprops/action-gh-release
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macos-14 = M1 runner (arm64)
+          - { name: "macOS arm64",    os: macos-14       }
+          - { name: "Windows x86_64", os: windows-latest }
+          - { name: "Linux amd64",    os: ubuntu-22.04   }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Python deps ────────────────────────────────────────────────────────
+      - name: Install Python dependencies
+        run: pip install PySide6 pydub numpy pyinstaller pyyaml
+
+      # ── ffmpeg + ffprobe ───────────────────────────────────────────────────
+      # ffmpeg-static  → https://www.npmjs.com/package/ffmpeg-static
+      # ffprobe-static → https://www.npmjs.com/package/ffprobe-static
+      # Both ship LGPL static binaries for darwin-arm64, linux-x64, win32-x64.
+      - name: Download ffmpeg + ffprobe (npm)
+        shell: bash
+        run: |
+          npm install ffmpeg-static ffprobe-static
+          node -e "
+            var fs=require('fs'),path=require('path');
+            var ext=process.platform==='win32'?'.exe':'';
+            var ff=require('ffmpeg-static');
+            var fp=require('ffprobe-static').path;
+            fs.mkdirSync('bin',{recursive:true});
+            [[ff,'ffmpeg'+ext],[fp,'ffprobe'+ext]].forEach(function(x){
+              var dst=path.join('bin',x[1]);
+              fs.copyFileSync(x[0],dst);
+              try{fs.chmodSync(dst,0o755);}catch(e){}
+              console.log(x[0],'->',dst);
+            });
+          "
+
+      # ── Linux system libs ──────────────────────────────────────────────────
+      # PySide6 needs several X11/GL/audio libraries even on a headless runner.
+      # libfuse2 is required to run appimagetool (which is itself an AppImage).
+      - name: Install Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libglib2.0-0 libxkbcommon0 libdbus-1-3 \
+            libnss3 libxcomposite1 libxdamage1 libxrandr2 \
+            libgbm1 libasound2 libxss1 libxtst6 \
+            libfuse2
+
+      # ── Build ──────────────────────────────────────────────────────────────
+
+      # macOS: --windowed creates a proper .app bundle.
+      # Windows: --windowed suppresses the console window.
+      - name: Build — onefile (macOS + Windows)
+        if: runner.os != 'Linux'
+        run: >
+          python -m PyInstaller
+          --onefile --windowed --name concat
+          --add-data "bin:bin"
+          app.py
+
+      # Linux: onedir mode gives a directory tree that appimagetool can wrap.
+      # QT_QPA_PLATFORM=offscreen prevents Qt from trying to open a display
+      # during PyInstaller's import analysis phase.
+      - name: Build — onedir (Linux → AppImage)
+        if: runner.os == 'Linux'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: >
+          python -m PyInstaller
+          --onedir --name concat
+          --add-data "bin:bin"
+          app.py
+
+      # ── Package ────────────────────────────────────────────────────────────
+
+      - name: Package — macOS → zip
+        if: runner.os == 'macOS'
+        run: cd dist && zip -r ../concat-macos-arm64.zip concat.app
+
+      - name: Package — Windows → rename exe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Copy-Item dist\concat.exe concat-windows-x86_64.exe
+
+      - name: Package — Linux → AppImage
+        if: runner.os == 'Linux'
+        run: |
+          # Populate the AppDir from the PyInstaller onedir output
+          mkdir -p AppDir
+          cp -r dist/concat/* AppDir/
+
+          # AppRun: the entry-point the AppImage runtime calls
+          cat > AppDir/AppRun << 'APPRUN'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE="${SELF%/*}"
+          exec "${HERE}/concat" "$@"
+          APPRUN
+          chmod +x AppDir/AppRun
+
+          # Desktop entry (required by AppImage spec)
+          cat > AppDir/concat.desktop << 'DESKTOP'
+          [Desktop Entry]
+          Name=Audio Concatenator
+          Comment=Join audio files into one WAV
+          Exec=concat
+          Icon=concat
+          Type=Application
+          Categories=AudioVideo;Audio;
+          DESKTOP
+
+          # Minimal 256×256 PNG placeholder icon.
+          # Replace AppDir/concat.png with real artwork before shipping.
+          python3 -c "
+          import struct, zlib
+          def chunk(t, d):
+              c = t + d
+              return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+          W = H = 256
+          raw = b''.join(b'\x00' + b'\x4a\x5e\x8c' * W for _ in range(H))
+          png = (b'\x89PNG\r\n\x1a\n'
+                 + chunk(b'IHDR', struct.pack('>IIBBBBB', W, H, 8, 2, 0, 0, 0))
+                 + chunk(b'IDAT', zlib.compress(raw))
+                 + chunk(b'IEND', b''))
+          open('AppDir/concat.png', 'wb').write(png)
+          "
+
+          # Download appimagetool and build the AppImage
+          wget -q \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir concat-linux-amd64.AppImage
+
+      # ── Upload artifacts ───────────────────────────────────────────────────
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS'
+        with:
+          name: concat-macos-arm64
+          path: concat-macos-arm64.zip
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: concat-windows-x86_64
+          path: concat-windows-x86_64.exe
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: concat-linux-amd64
+          path: concat-linux-amd64.AppImage
+
+      # ── GitHub Release (tag pushes only) ───────────────────────────────────
+      # All three matrix jobs run this step; each uploads only its own file.
+      # fail_on_unmatched_files: false lets the other two paths be absent.
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: false
+          files: |
+            concat-macos-arm64.zip
+            concat-windows-x86_64.exe
+            concat-linux-amd64.AppImage

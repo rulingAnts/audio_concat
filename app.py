@@ -15,7 +15,8 @@ try:
 except ImportError:
     _HAS_YAML = False
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, QKeySequence, Signal
+from PySide6.QtGui import QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -809,6 +810,10 @@ class MainWindow(QMainWindow):
 
         self.statusBar().showMessage("Ready")
 
+        # Ctrl+Shift+F (⌘+Shift+F on macOS) → show ffmpeg diagnostic
+        shortcut = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        shortcut.activated.connect(self._show_ffmpeg_info)
+
     # ── Sort settings save / load ────────────────────────────────────────────
 
     def _collect_settings(self) -> dict:
@@ -1020,6 +1025,47 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Settings loaded: {path}")
 
     # ── Slots ────────────────────────────────────────────────────────────────
+
+    def _show_ffmpeg_info(self):
+        """
+        Ctrl+Shift+F — show which ffmpeg / ffprobe binaries the app is using
+        and whether they came from the bundled bin/ directory or from PATH.
+        """
+        import shutil
+        from ffmpeg_utils import find_binary, _app_root
+
+        lines: list[str] = []
+
+        frozen = getattr(sys, "frozen", False)
+        lines.append(f"Frozen (PyInstaller):  {'yes' if frozen else 'no'}")
+        lines.append(f"App root:  {_app_root()}")
+        lines.append("")
+
+        for name in ("ffmpeg", "ffprobe"):
+            exe = name + (".exe" if sys.platform == "win32" else "")
+            bundled_path = _app_root() / "bin" / exe
+            found = find_binary(name)
+
+            if found is None:
+                source = "NOT FOUND"
+                detail = "Install ffmpeg system-wide or place a binary in bin/"
+            elif bundled_path.is_file() and Path(found).resolve() == bundled_path.resolve():
+                source = "bundled (bin/)"
+                detail = found
+            else:
+                source = "system PATH"
+                detail = found
+
+            lines.append(f"{name}:")
+            lines.append(f"  source : {source}")
+            lines.append(f"  path   : {detail}")
+            lines.append("")
+
+        QMessageBox.information(
+            self,
+            "FFmpeg diagnostic  (Ctrl+Shift+F)",
+            "\n".join(lines).rstrip(),
+        )
 
     def _on_mode_toggle(self, btn_id: int, checked: bool):
         if checked:
