@@ -1,0 +1,25 @@
+# Claude Code settings — keep local, never commit
+.claude/
+
+# PyInstaller build artifacts
+dist/
+build/
+*.spec
+
+# npm (used in CI to download ffmpeg binaries)
+node_modules/
+package.json
+package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
