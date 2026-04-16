@@ -30,12 +30,17 @@
       position: sticky; top: 0; z-index: 100;
       background: var(--accent); color: #fff;
       padding: 0 1.5rem;
-      display: flex; align-items: center; gap: 2rem;
-      height: 52px;
+      display: flex; align-items: center; gap: 1.6rem;
+      height: 52px; flex-wrap: nowrap; overflow-x: auto;
     }
-    nav .brand { font-weight: 700; font-size: 1.1rem; white-space: nowrap; }
-    nav a { color: rgba(255,255,255,.85); text-decoration: none; font-size: .9rem; }
+    nav .brand { font-weight: 700; font-size: 1.05rem; white-space: nowrap; margin-right: .4rem; }
+    nav a { color: rgba(255,255,255,.85); text-decoration: none; font-size: .88rem; white-space: nowrap; }
     nav a:hover { color: #fff; }
+    nav a.nav-dl {
+      background: rgba(255,255,255,.18); border-radius: 6px;
+      padding: .25rem .75rem; color: #fff; font-weight: 600;
+    }
+    nav a.nav-dl:hover { background: rgba(255,255,255,.28); }
 
     /* ── Layout ── */
     .page { max-width: var(--max-w); margin: 0 auto; padding: 2rem 1.5rem 4rem; }
@@ -48,7 +53,7 @@
     }
     .hero h1 { font-size: 2rem; margin-bottom: .4rem; }
     .hero p  { color: var(--muted); font-size: 1.05rem; max-width: 580px; }
-    .badge-row { margin-top: 1.2rem; display: flex; gap: .6rem; flex-wrap: wrap; }
+    .badge-row { margin-top: 1rem; display: flex; gap: .5rem; flex-wrap: wrap; }
     .badge {
       display: inline-block; padding: .2rem .7rem;
       border-radius: 999px; font-size: .78rem; font-weight: 600;
@@ -56,6 +61,33 @@
     .badge-blue  { background: #dbeafe; color: var(--accent-d); }
     .badge-green { background: #dcfce7; color: #15803d; }
     .badge-gray  { background: #f1f5f9; color: var(--muted); }
+
+    /* ── Download cards ── */
+    .dl-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem; margin: 1.8rem 0 .6rem;
+    }
+    .dl-card {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 1.2rem 1rem 1rem; background: var(--bg);
+      display: flex; flex-direction: column; gap: .5rem;
+    }
+    .dl-card .plat-name { font-weight: 700; font-size: 1rem; }
+    .dl-card .plat-sub  { font-size: .82rem; color: var(--muted); }
+    .dl-btn {
+      display: inline-block; margin-top: auto; padding: .5rem .9rem;
+      background: var(--accent); color: #fff; border-radius: 7px;
+      text-decoration: none; font-weight: 600; font-size: .9rem;
+      text-align: center; transition: background .15s;
+    }
+    .dl-btn:hover { background: var(--accent-d); }
+    .dl-btn.loading { background: var(--muted); cursor: default; }
+    .dl-meta { font-size: .78rem; color: var(--muted); }
+    .release-line {
+      font-size: .85rem; color: var(--muted); margin-top: .4rem;
+    }
+    .release-line a { color: var(--accent); }
 
     /* ── Sections ── */
     h2 {
@@ -105,6 +137,32 @@
     .callout.warn { border-color: #f59e0b; background: #fffbeb; }
     .callout strong { display: block; margin-bottom: .2rem; }
 
+    /* ── First-run platform tabs ── */
+    .platform-tabs { margin: 1rem 0 1.4rem; }
+    .tab-btns {
+      display: flex; gap: .4rem; margin-bottom: 0;
+      border-bottom: 2px solid var(--border);
+    }
+    .tab-btn {
+      padding: .45rem 1rem; border: 1px solid transparent;
+      border-bottom: none; border-radius: 6px 6px 0 0;
+      background: none; cursor: pointer; font-size: .9rem;
+      color: var(--muted); font-family: inherit;
+      margin-bottom: -2px;
+    }
+    .tab-btn.active {
+      background: var(--bg); border-color: var(--border);
+      border-bottom-color: var(--bg); color: var(--text); font-weight: 600;
+    }
+    .tab-panel {
+      display: none; padding: 1.2rem 1rem;
+      border: 1px solid var(--border); border-top: none;
+      border-radius: 0 0 6px 6px; background: var(--bg);
+    }
+    .tab-panel.active { display: block; }
+    .tab-panel ol { margin: .5rem 0 0; }
+    .tab-panel p { margin-bottom: .5rem; }
+
     /* ── Layer diagram ── */
     .layer-box {
       border: 1px solid var(--border); border-radius: 8px;
@@ -141,10 +199,12 @@
 
 <nav>
   <span class="brand">Audio Concatenator</span>
-  <a href="#quickstart">Quick Start</a>
+  <a href="#download" class="nav-dl">Download</a>
+  <a href="#first-run">First Run</a>
+  <a href="#interface">Interface</a>
   <a href="#simple">Simple Sort</a>
   <a href="#advanced">Advanced Sort</a>
-  <a href="#regex-reference">Regex Reference</a>
+  <a href="#regex-reference">Regex</a>
   <a href="#faq">FAQ</a>
 </nav>
 
@@ -156,70 +216,186 @@
     <p>Load a folder of audio files, arrange them in any order, and join them
        into a single WAV with a click marker between each file.</p>
     <div class="badge-row">
-      <span class="badge badge-blue">PySide6 GUI</span>
       <span class="badge badge-green">Windows · macOS · Linux</span>
-      <span class="badge badge-gray">Python 3.10+</span>
+      <span class="badge badge-blue">No installation required</span>
+      <span class="badge badge-gray">ffmpeg bundled</span>
       <span class="badge badge-gray">AGPL-3.0</span>
     </div>
   </div>
 
-  <!-- ── Quick Start ── -->
-  <h2 id="quickstart">Quick Start</h2>
+  <!-- ── Download ── -->
+  <h2 id="download">Download</h2>
 
-  <ol>
-    <li><strong>Install dependencies</strong>
-      <pre><code>pip install PySide6 pydub numpy</code></pre>
-      You also need <strong>ffmpeg</strong> on your system PATH, or place a static
-      binary in the <code>bin/</code> folder next to the app (see
-      <a href="#ffmpeg">FFmpeg setup</a>).
-    </li>
-    <li><strong>Run the app</strong>
-      <pre><code>python app.py</code></pre>
-    </li>
-    <li>Click <strong>Load Folder…</strong> and choose a folder of audio files.</li>
-    <li>Arrange the files — drag rows to reorder, or use the sort controls.</li>
-    <li>Choose an output path and bit depth, then click <strong>Join Files</strong>.</li>
-  </ol>
+  <div class="dl-grid" id="dl-grid">
+    <div class="dl-card" id="card-mac">
+      <span class="plat-name">macOS</span>
+      <span class="plat-sub">Apple Silicon (arm64)<br>macOS 13 Ventura or later</span>
+      <a id="dl-mac" class="dl-btn loading" href="#">Loading&hellip;</a>
+      <span class="dl-meta" id="meta-mac"></span>
+    </div>
+    <div class="dl-card" id="card-win">
+      <span class="plat-name">Windows</span>
+      <span class="plat-sub">64-bit (x86_64)<br>Windows 10 / 11</span>
+      <a id="dl-win" class="dl-btn loading" href="#">Loading&hellip;</a>
+      <span class="dl-meta" id="meta-win"></span>
+    </div>
+    <div class="dl-card" id="card-linux">
+      <span class="plat-name">Linux</span>
+      <span class="plat-sub">64-bit (amd64)<br>AppImage — runs on most distros</span>
+      <a id="dl-linux" class="dl-btn loading" href="#">Loading&hellip;</a>
+      <span class="dl-meta" id="meta-linux"></span>
+    </div>
+  </div>
+
+  <p class="release-line" id="release-line">
+    Fetching latest release&hellip;
+    &ensp;&#x2022;&ensp;
+    <a href="https://github.com/rulingAnts/audio_concat/releases" target="_blank">All releases &rarr;</a>
+  </p>
+
+  <!-- ── First Run ── -->
+  <h2 id="first-run">First Run</h2>
+
+  <p>Because the app is not signed with a platform certificate, each operating
+  system will warn you before it runs for the first time. This is expected — the
+  steps below take about 30 seconds and only need to be done once per
+  downloaded copy.</p>
+
+  <div class="platform-tabs">
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showTab('mac',this)">macOS</button>
+      <button class="tab-btn"        onclick="showTab('win',this)">Windows</button>
+      <button class="tab-btn"        onclick="showTab('linux',this)">Linux</button>
+    </div>
+
+    <div id="tab-mac" class="tab-panel active">
+      <p>macOS Gatekeeper blocks apps that are not notarized with an Apple
+      Developer certificate. You will see <em>"The application 'concat'
+      can't be opened."</em> (error&nbsp;&minus;47).</p>
+      <ol>
+        <li>Unzip <code>concat-macos-arm64.zip</code>. A <strong>concat.app</strong>
+            file appears.</li>
+        <li>Double-click <strong>concat.app</strong>. The error dialog appears —
+            click <strong>OK</strong> to dismiss it.</li>
+        <li>Open the <strong>Apple menu</strong> &#x276F; <strong>System Settings</strong>.</li>
+        <li>Click <strong>Privacy &amp; Security</strong> in the left sidebar.</li>
+        <li>Scroll down to the <strong>Security</strong> section. You will see:<br>
+            <em>"concat" was blocked from use because it is not from an identified
+            developer.</em></li>
+        <li>Click <strong>Open Anyway</strong>.</li>
+        <li>Authenticate with your password or Touch ID when prompted.</li>
+        <li>A final confirmation dialog appears — click <strong>Open</strong>.</li>
+      </ol>
+      <div class="callout tip" style="margin-top:.9rem">
+        <strong>macOS Ventura (13) and earlier</strong>
+        The setting is in <strong>System Preferences</strong> &rarr;
+        <strong>Security &amp; Privacy</strong> &rarr; <strong>General</strong>
+        tab &rarr; click the lock &rarr; <strong>Open Anyway</strong>.
+      </div>
+    </div>
+
+    <div id="tab-win" class="tab-panel">
+      <p>Windows Defender SmartScreen warns about executables that are not
+      digitally signed by a known publisher.</p>
+      <ol>
+        <li>Download <code>concat-windows-x86_64.exe</code>.</li>
+        <li>Double-click the file. SmartScreen shows
+            <em>"Windows protected your PC."</em></li>
+        <li>Click <strong>More info</strong> (the small link below the message).</li>
+        <li>Click <strong>Run anyway</strong>.</li>
+      </ol>
+      <div class="callout tip" style="margin-top:.9rem">
+        <strong>Tip</strong>
+        If your browser flags the download as potentially unsafe, look for a
+        "Keep" or "Keep anyway" option in the download bar before running.
+      </div>
+    </div>
+
+    <div id="tab-linux" class="tab-panel">
+      <p>AppImage files need the executable bit set before they can be launched.
+      Do this once after downloading.</p>
+      <p><strong>Option A — file manager (no terminal):</strong></p>
+      <ol>
+        <li>Right-click <code>concat-linux-amd64.AppImage</code> in your file
+            manager.</li>
+        <li>Open <strong>Properties</strong> (or <strong>Permissions</strong>).</li>
+        <li>Check <strong>Allow executing file as program</strong>
+            (the exact label varies by desktop environment).</li>
+        <li>Double-click the file to launch.</li>
+      </ol>
+      <p><strong>Option B — terminal:</strong></p>
+      <pre><code>chmod +x concat-linux-amd64.AppImage
+./concat-linux-amd64.AppImage</code></pre>
+      <div class="callout tip" style="margin-top:.9rem">
+        <strong>FUSE required</strong>
+        AppImages need FUSE to run. Most desktop Linux distributions include it.
+        If you see an error about FUSE or <code>libfuse.so.2</code>, install it
+        with your package manager — e.g.
+        <code>sudo apt install libfuse2</code> on Ubuntu/Debian.
+      </div>
+    </div>
+  </div>
 
   <!-- ── Interface overview ── -->
   <h2 id="interface">Interface Overview</h2>
 
+  <p>After opening the app, click <strong>Load Folder&hellip;</strong> to get
+  started. The app accepts WAV, MP3, FLAC, AIFF, OGG, M4A, and MP4 files;
+  everything is converted to WAV on output. No audio files need to be converted
+  beforehand.</p>
+
   <table>
     <tr><th>Section</th><th>What it does</th></tr>
     <tr>
-      <td><strong>Load Folder…</strong></td>
-      <td>Opens a folder picker. All audio files found inside are loaded into
-          the list, sorted alphabetically by default.</td>
+      <td><strong>Load Folder&hellip;</strong></td>
+      <td>Opens a folder picker. All recognised audio files found inside are
+          loaded into the list, sorted alphabetically by default. The output
+          path is pre-filled as <code>{folder}_joined.wav</code> next to the
+          source folder.</td>
     </tr>
     <tr>
       <td><strong>File list</strong></td>
-      <td>The join order. Drag rows to rearrange.
-          Shift+Click for contiguous selection;
+      <td>Shows the join order. Drag rows to rearrange.
+          Shift+Click for a contiguous range;
           Ctrl/Cmd+Click to toggle individual items.
           Drag a multi-selection to move the whole group at once.</td>
     </tr>
     <tr>
       <td><strong>Sort mode</strong></td>
-      <td>Switch between <em>Simple (GUI)</em> and <em>Advanced (Regex)</em>
+      <td>Toggle between <em>Simple (GUI)</em> and <em>Advanced (Regex)</em>
           sort controls. Only one is active at a time.</td>
     </tr>
     <tr>
+      <td><strong>Save / Load Settings</strong></td>
+      <td>Save all current sort settings to a YAML file and reload them later
+          or share them with a colleague. The file is human-readable and
+          includes inline comments explaining every option.</td>
+    </tr>
+    <tr>
       <td><strong>Output</strong></td>
-      <td>Path for the joined WAV. Auto-suggested as
-          <code>{folder}_joined.wav</code> next to the source folder.</td>
+      <td>Path for the joined WAV. Click <strong>Browse&hellip;</strong> to
+          choose a different location or filename.</td>
     </tr>
     <tr>
       <td><strong>Bit depth</strong></td>
-      <td>16-bit (default, CD quality), 24-bit (studio), or 32-bit.
-          All input formats are resampled to 44 100 Hz mono before joining.</td>
+      <td>16-bit (default, CD quality), 24-bit (studio), or 32-bit (maximum
+          headroom). All input files are resampled to 44 100 Hz mono at the
+          chosen bit depth before being joined.</td>
     </tr>
     <tr>
       <td><strong>Join Files</strong></td>
-      <td>Concatenates the files in list order with a 5 ms click + 500 ms
-          silence on each side between every pair of files. Runs in the
-          background; the UI stays responsive.</td>
+      <td>Concatenates all files in list order, inserting a 5 ms click burst
+          and 500 ms silence between each pair. Runs in the background so the
+          UI stays responsive.</td>
     </tr>
   </table>
+
+  <div class="callout tip">
+    <strong>Keyboard shortcut — Ctrl+Shift+F (&#x2318;+Shift+F on macOS)</strong>
+    Opens a diagnostic panel showing exactly which ffmpeg and ffprobe binaries
+    the app is using and where they were found. Useful for verifying that the
+    bundled binaries are active.
+  </div>
 
   <!-- ── Simple sort ── -->
   <h2 id="simple">Simple Sort Mode</h2>
@@ -230,7 +406,7 @@
 
   <table>
     <tr><th>Field</th><th>Sorts by</th></tr>
-    <tr><td>Name (alphabetical)</td><td>Filename, A→Z or Z→A</td></tr>
+    <tr><td>Name (alphabetical)</td><td>Filename, A&rarr;Z or Z&rarr;A</td></tr>
     <tr><td>Name (numerical)</td><td>Natural/numeric order — <code>track2</code> before <code>track10</code></td></tr>
     <tr><td>Date created</td><td>File creation time (birth time on macOS)</td></tr>
     <tr><td>Date modified</td><td>Last modification time</td></tr>
@@ -253,8 +429,9 @@
     <li>Type each suffix substring (or regex pattern) into the input field and
         click <strong>Add</strong>, or press Enter. Add one entry per suffix
         variant.</li>
-    <li>Drag the entries to set their priority order — the file containing the
-        first matching entry in the list will sort first within its base group.</li>
+    <li>Drag the entries to set their priority order — the file whose name
+        contains the first matching entry in the list will sort first within
+        its base group.</li>
     <li>Click <strong>Apply Suffix Order</strong>.</li>
   </ol>
 
@@ -280,7 +457,7 @@
 0001-cntr-top-irt.wav
 0002-ynq-irt.wav
 0002-whq-irt.wav
-…</code></pre>
+&hellip;</code></pre>
 
   <div class="callout tip">
     <strong>Overlapping patterns handled automatically</strong>
@@ -306,21 +483,20 @@
   <h3>What is a regex?</h3>
 
   <p>A <em>regular expression</em> (regex) is a pattern that describes text.
-  The app uses Python's regex engine. You don't need to be an expert — the
-  most useful concept here is the <strong>capture group</strong>: any text
-  wrapped in <code>( )</code> parentheses is "captured" and used as the sort
-  key.</p>
+  The most useful concept here is the <strong>capture group</strong>: any text
+  wrapped in <code>( )</code> parentheses is &ldquo;captured&rdquo; and used
+  as the sort key.</p>
 
   <pre><code>Pattern:    ^(\d+)
 Filename:   0042-ans-irt.wav
-Captured:   0042   ← this value is used to sort the file</code></pre>
+Captured:   0042   &larr; this value is used to sort the file</code></pre>
 
   <div class="callout tip">
-    <strong>Tip — Ask an AI to write your regex</strong>
+    <strong>Tip &mdash; Ask an AI to write your regex</strong>
     Not sure how to write a pattern? Paste a few example filenames into
     Claude, ChatGPT, or another AI assistant and ask:
-    <em>"Write a Python regex with a capture group that extracts [the part
-    I want to sort by] from these filenames."</em>
+    <em>&ldquo;Write a Python regex with a capture group that extracts
+    [the part I want to sort by] from these filenames.&rdquo;</em>
   </div>
 
   <h3>The layer system</h3>
@@ -337,19 +513,19 @@ Captured:   0042   ← this value is used to sort the file</code></pre>
         Layer 1 and Layer 2, and so on.</li>
   </ul>
 
-  <p>Use <strong>▲ / ▼</strong> to reorder layers. Click
-  <strong>+ Add Layer</strong> to add a new one.  The minimum is one layer.</p>
+  <p>Use <strong>&#x25B2; / &#x25BC;</strong> to reorder layers. Click
+  <strong>+ Add Layer</strong> to add a new one. The minimum is one layer.</p>
 
   <div class="layer-box">
     <div class="layer-row">
       <span class="layer-num">Layer 1</span>
       <span class="layer-pat">^(\d+)</span>
-      <span class="layer-meta">Numeric · Ascending</span>
+      <span class="layer-meta">Numeric &middot; Ascending</span>
     </div>
     <div class="layer-row">
       <span class="layer-num">Layer 2</span>
       <span class="layer-pat">-(\w+-irt)\.</span>
-      <span class="layer-meta">Natural text · Ascending</span>
+      <span class="layer-meta">Natural text &middot; Ascending</span>
     </div>
   </div>
 
@@ -361,14 +537,15 @@ Captured:   0042   ← this value is used to sort the file</code></pre>
   <table>
     <tr><th>Control</th><th>What it does</th></tr>
     <tr>
-      <td><strong>▲ / ▼</strong></td>
+      <td><strong>&#x25B2; / &#x25BC;</strong></td>
       <td>Move the layer up (higher priority) or down (lower priority).</td>
     </tr>
     <tr>
       <td><strong>Pattern</strong></td>
       <td>A Python regex containing at least one capture group <code>( )</code>.
-          A <span class="ok">✓</span> appears when the pattern is valid;
-          <span class="err">✗</span> appears (with error tooltip) when it is not.</td>
+          A <span class="ok">&#x2713;</span> appears when the pattern is valid;
+          <span class="err">&#x2717;</span> appears (with error tooltip) when
+          it is not.</td>
     </tr>
     <tr>
       <td><strong>Grp</strong></td>
@@ -384,7 +561,7 @@ Captured:   0042   ← this value is used to sort the file</code></pre>
       <td>Sort direction for this layer.</td>
     </tr>
     <tr>
-      <td><strong>✕</strong></td>
+      <td><strong>&#x2715;</strong></td>
       <td>Remove this layer (minimum one layer always remains).</td>
     </tr>
   </table>
@@ -401,67 +578,67 @@ Captured:   0042   ← this value is used to sort the file</code></pre>
     </tr>
     <tr>
       <td><strong>Numeric</strong></td>
-      <td>Parse the captured text as a number (float). Use when the
-          capture group contains only digits or a decimal value.</td>
+      <td>Parse the captured text as a number (float). Use when the capture
+          group contains only digits or a decimal value.</td>
       <td><code>120.5</code> &lt; <code>130</code></td>
     </tr>
     <tr>
       <td><strong>Alphabetical</strong></td>
-      <td>Plain case-insensitive A–Z string comparison.
-          Digits sort as characters, not numbers.</td>
+      <td>Plain case-insensitive A&ndash;Z string comparison. Digits sort as
+          characters, not numbers.</td>
       <td><code>track10</code> &lt; <code>track2</code></td>
     </tr>
   </table>
 
   <h3>Unmatched files</h3>
 
-  <p>If a file's name does not match a layer's pattern, that file is sorted
-  <em>after</em> all files that did match — but it still keeps its position
-  relative to other unmatched files, and is still sorted correctly by any
-  higher-priority layer it did match.</p>
+  <p>If a file&rsquo;s name does not match a layer&rsquo;s pattern, that file
+  is sorted <em>after</em> all files that did match &mdash; but it still keeps
+  its position relative to other unmatched files, and is still sorted correctly
+  by any higher-priority layer it did match.</p>
 
   <!-- ── Regex reference ── -->
   <h2 id="regex-reference">Regex Quick Reference</h2>
 
-  <p>These are the building blocks you'll use most often. Every example below
-  is a complete pattern ready to paste into the Pattern field.</p>
+  <p>These are the building blocks you&rsquo;ll use most often. Every example
+  below is a complete pattern ready to paste into the Pattern field.</p>
 
   <table>
-    <tr><th>Pattern</th><th>Captures</th><th>Example filename → captured</th></tr>
+    <tr><th>Pattern</th><th>Captures</th><th>Example filename &rarr; captured</th></tr>
     <tr>
       <td><code>^(\d+)</code></td>
       <td>Leading digits at the start of the filename</td>
-      <td><code>0042-ans-irt.wav</code> → <code>0042</code></td>
+      <td><code>0042-ans-irt.wav</code> &rarr; <code>0042</code></td>
     </tr>
     <tr>
       <td><code>-(\w+-irt)\.</code></td>
       <td>A hyphen-separated suffix ending in <code>-irt</code></td>
-      <td><code>0001-ynq-irt.wav</code> → <code>ynq-irt</code></td>
+      <td><code>0001-ynq-irt.wav</code> &rarr; <code>ynq-irt</code></td>
     </tr>
     <tr>
       <td><code>_(\d{4}-\d{2}-\d{2})</code></td>
       <td>A date in <code>YYYY-MM-DD</code> format preceded by an underscore</td>
-      <td><code>rec_2024-03-15.wav</code> → <code>2024-03-15</code></td>
+      <td><code>rec_2024-03-15.wav</code> &rarr; <code>2024-03-15</code></td>
     </tr>
     <tr>
       <td><code>(\d{2,3})bpm</code></td>
-      <td>A 2–3-digit BPM value</td>
-      <td><code>loop_128bpm_A.wav</code> → <code>128</code></td>
+      <td>A 2&ndash;3-digit BPM value</td>
+      <td><code>loop_128bpm_A.wav</code> &rarr; <code>128</code></td>
     </tr>
     <tr>
       <td><code>_([A-G][#b]?)_</code></td>
       <td>A musical key between underscores</td>
-      <td><code>chord_Eb_maj.wav</code> → <code>Eb</code></td>
+      <td><code>chord_Eb_maj.wav</code> &rarr; <code>Eb</code></td>
     </tr>
     <tr>
       <td><code>(\d+)$</code></td>
       <td>Trailing digits at the end of the stem (before the extension)</td>
-      <td><code>take007.wav</code> → <code>007</code></td>
+      <td><code>take007.wav</code> &rarr; <code>007</code></td>
     </tr>
     <tr>
       <td><code>-(spkr\d+)-</code></td>
       <td>A speaker ID like <code>spkr03</code></td>
-      <td><code>item01-spkr03-cond2.wav</code> → <code>spkr03</code></td>
+      <td><code>item01-spkr03-cond2.wav</code> &rarr; <code>spkr03</code></td>
     </tr>
   </table>
 
@@ -469,8 +646,8 @@ Captured:   0042   ← this value is used to sort the file</code></pre>
 
   <table>
     <tr><th>Symbol</th><th>Meaning</th></tr>
-    <tr><td><code>( )</code></td><td>Capture group — the text inside is used as the sort key</td></tr>
-    <tr><td><code>\d</code></td><td>Any digit (0–9)</td></tr>
+    <tr><td><code>( )</code></td><td>Capture group &mdash; the text inside is used as the sort key</td></tr>
+    <tr><td><code>\d</code></td><td>Any digit (0&ndash;9)</td></tr>
     <tr><td><code>\w</code></td><td>Any word character (letters, digits, underscore)</td></tr>
     <tr><td><code>.</code></td><td>Any single character (escape as <code>\.</code> for a literal dot)</td></tr>
     <tr><td><code>+</code></td><td>One or more of the preceding item</td></tr>
@@ -481,30 +658,32 @@ Captured:   0042   ← this value is used to sort the file</code></pre>
     <tr><td><code>-</code></td><td>Literal hyphen (outside a character class)</td></tr>
     <tr><td><code>[abc]</code></td><td>Any one of a, b, or c</td></tr>
     <tr><td><code>[A-Z]</code></td><td>Any uppercase letter</td></tr>
-    <tr><td><code>(?:…)</code></td><td>Non-capturing group (groups without counting toward Grp number)</td></tr>
+    <tr><td><code>(?:&hellip;)</code></td><td>Non-capturing group (does not count toward the Grp number)</td></tr>
   </table>
 
   <div class="callout warn">
     <strong>Testing your pattern</strong>
-    The <span class="ok">✓</span> / <span class="err">✗</span> indicator only
-    checks that the pattern is <em>syntactically valid</em> — it does not
-    confirm it matches your filenames. Always click
+    The <span class="ok">&#x2713;</span> / <span class="err">&#x2717;</span>
+    indicator only checks that the pattern is <em>syntactically valid</em> &mdash;
+    it does not confirm it matches your filenames. Always click
     <strong>Apply Regex Sort</strong> and inspect the resulting file order
-    before clicking <strong>Join Files</strong>.
+    before clicking <strong>Join Files</strong>. You can also test patterns at
+    <a href="https://regex101.com" target="_blank">regex101.com</a> &mdash;
+    choose the &ldquo;Python&rdquo; flavour.
   </div>
 
-  <!-- ── Multi-layer worked example ── -->
-  <h2 id="worked-example">Worked Example — Dekereke Database</h2>
+  <!-- ── Worked example ── -->
+  <h2 id="worked-example">Worked Example &mdash; Dekereke Database</h2>
 
   <p>Suppose your folder contains files named:</p>
   <pre><code>0001-ans-irt.wav      0002-ans-irt.wav      0003-ans-irt.wav
 0001-ynq-irt.wav      0002-ynq-irt.wav      0003-ynq-irt.wav
 0001-cntr-foc-irt.wav 0002-cntr-foc-irt.wav 0003-cntr-foc-irt.wav</code></pre>
 
-  <p>You want the output order to be: all variants of 0001 first (ynq, ans,
-  cntr-foc), then all of 0002, then 0003.</p>
+  <p>You want the output order: all variants of 0001 first (ynq, ans, cntr-foc),
+  then all of 0002, then 0003.</p>
 
-  <h3>Option A — Suffix Order panel (Simple mode, recommended)</h3>
+  <h3>Option A &mdash; Suffix Order panel (Simple mode, recommended)</h3>
   <ol>
     <li>Open <strong>Simple (GUI)</strong> mode.</li>
     <li>In the Suffix Order box, add entries in this order:
@@ -515,7 +694,7 @@ cntr-foc-irt</code></pre>
     <li>Click <strong>Apply Suffix Order</strong>.</li>
   </ol>
 
-  <h3>Option B — Advanced (Regex) mode</h3>
+  <h3>Option B &mdash; Advanced (Regex) mode</h3>
   <ol>
     <li>Open <strong>Advanced (Regex)</strong> mode.</li>
     <li>Set up two layers:
@@ -523,16 +702,16 @@ cntr-foc-irt</code></pre>
         <div class="layer-row">
           <span class="layer-num">Layer 1</span>
           <span class="layer-pat">^(\d+)</span>
-          <span class="layer-meta">Numeric · Ascending — groups by base number</span>
+          <span class="layer-meta">Numeric &middot; Ascending &mdash; groups by base number</span>
         </div>
         <div class="layer-row">
           <span class="layer-num">Layer 2</span>
           <span class="layer-pat">-(\w+-irt)\.</span>
-          <span class="layer-meta">Alphabetical · Ascending — sub-sorts suffix</span>
+          <span class="layer-meta">Alphabetical &middot; Ascending &mdash; sub-sorts suffix</span>
         </div>
       </div>
-      <p>Note: Alphabetical gives <code>ans</code> → <code>cntr-foc</code> → <code>ynq</code>.
-         To get a custom suffix order instead, use Option A.</p>
+      <p>Note: Alphabetical gives <code>ans</code> &rarr; <code>cntr-foc</code>
+         &rarr; <code>ynq</code>. For a custom suffix order use Option A.</p>
     </li>
     <li>Click <strong>Apply Regex Sort</strong>.</li>
   </ol>
@@ -559,75 +738,157 @@ cntr-foc-irt</code></pre>
     </tr>
   </table>
 
-  <p>All input files are normalised to <strong>44 100 Hz mono</strong>
-  at the chosen bit depth before being joined. The click marker between each
-  file is a 5 ms 2 kHz sine burst with 500 ms of silence on each side.</p>
-
-  <!-- ── FFmpeg ── -->
-  <h2 id="ffmpeg">FFmpeg Setup</h2>
-
-  <p>The app uses <a href="https://ffmpeg.org" target="_blank">ffmpeg</a> (via
-  pydub) to decode non-WAV formats. It looks in two places, in order:</p>
-
-  <ol>
-    <li><strong>Bundled binary</strong> — <code>bin/ffmpeg</code> (or
-        <code>bin/ffmpeg.exe</code> on Windows) placed next to
-        <code>app.py</code>.</li>
-    <li><strong>System PATH</strong> — any <code>ffmpeg</code> installed
-        system-wide (e.g. via <code>brew install ffmpeg</code> on macOS or
-        the installer on Windows).</li>
-  </ol>
-
-  <p>If neither is found, the app shows an error dialog at startup.
-  See <code>bin/README.md</code> in the repository for download links and the
-  PyInstaller <code>.spec</code> snippet for bundling.</p>
+  <p>All input files are normalised to <strong>44 100 Hz mono</strong> at the
+  chosen bit depth before being joined. The click marker between each file is a
+  5 ms 2 kHz sine burst with 500 ms of silence on each side.</p>
 
   <!-- ── FAQ ── -->
   <h2 id="faq">FAQ</h2>
 
   <h3>What audio formats are supported as input?</h3>
-  <p>WAV, MP3, FLAC, AIFF/AIF, OGG, M4A, MP4. Any format pydub/ffmpeg can
-  decode will work. The output is always WAV.</p>
+  <p>WAV, MP3, FLAC, AIFF/AIF, OGG, M4A, MP4 &mdash; any format that ffmpeg
+  can decode. The output is always WAV. The bundled ffmpeg binary handles all
+  formats without any additional installation.</p>
+
+  <h3>Do I need to install ffmpeg or Python?</h3>
+  <p>No. The portable app bundles everything it needs &mdash; Python, ffmpeg,
+  ffprobe, and all libraries &mdash; in a single download. Nothing else needs
+  to be installed.</p>
 
   <h3>Can I manually reorder files after applying a sort?</h3>
-  <p>Yes. Sort operations only rearrange the list — you can drag items freely
-  before or after applying any sort. The list order at the moment you click
-  <strong>Join Files</strong> is what gets used.</p>
+  <p>Yes. Sort operations only rearrange the list &mdash; you can drag items
+  freely before or after applying any sort. The list order at the moment you
+  click <strong>Join Files</strong> is what gets used.</p>
 
-  <h3>What if a file doesn't match any suffix pattern?</h3>
+  <h3>What if a file doesn&rsquo;t match any suffix pattern?</h3>
   <p>In Suffix Order mode, unmatched files sort after all matched files within
   their base group, using natural filename order. In Advanced Regex mode,
   unmatched files sort after matched files for that layer.</p>
 
-  <h3>My regex is marked ✓ but the sort looks wrong. Why?</h3>
-  <p>The ✓ only confirms the pattern is syntactically valid, not that it
-  matches your filenames. Check that your capture group <code>( )</code> is
-  in the right place and that the <strong>Grp</strong> number matches the
-  group you intend. You can test patterns at
-  <a href="https://regex101.com" target="_blank">regex101.com</a> — choose
-  "Python" flavour.</p>
-
-  <h3>Can I build a standalone portable app?</h3>
-  <p>Yes, via PyInstaller:</p>
-  <pre><code>pip install pyinstaller
-pyinstaller --onefile app.py</code></pre>
-  <p>Drop <code>ffmpeg</code> into <code>bin/</code> before packaging to bundle
-  it. See <code>bin/README.md</code> for the full <code>.spec</code> snippet.</p>
+  <h3>My regex is marked &#x2713; but the sort looks wrong. Why?</h3>
+  <p>The &#x2713; only confirms the pattern is syntactically valid, not that
+  it matches your filenames. Check that your capture group <code>( )</code>
+  is in the right place and that the <strong>Grp</strong> number matches the
+  group you intend. Test patterns at
+  <a href="https://regex101.com" target="_blank">regex101.com</a> &mdash;
+  choose &ldquo;Python&rdquo; flavour.</p>
 
   <h3>The join is slow for large folders. Is that normal?</h3>
   <p>Decoding, resampling, and writing audio is CPU-bound and scales with total
-  audio duration. The join runs on a background thread so the UI stays
-  responsive. A folder of 50 short WAV clips should finish in a few seconds;
-  long MP3s decoded through ffmpeg take longer.</p>
+  audio duration. The join runs in the background so the UI stays responsive.
+  A folder of 50 short WAV clips should finish in a few seconds; long MP3s
+  decoded through ffmpeg take longer.</p>
+
+  <h3>How do I save my sort settings to reuse them?</h3>
+  <p>Click <strong>Save Settings&hellip;</strong> in the sort mode row to write
+  a YAML file. Click <strong>Load Settings&hellip;</strong> to restore them in
+  any future session. The YAML file is plain text and can be edited by hand
+  or shared with colleagues; every field includes an inline comment listing the
+  allowed values.</p>
+
+  <h3>Is the macOS build Intel-compatible?</h3>
+  <p>The current release is built for Apple Silicon (arm64) only. It will not
+  run on older Intel Macs. Intel Mac support may be added in a future release.
+  In the meantime, Intel Mac users can run the app from source &mdash; see the
+  <a href="https://github.com/rulingAnts/audio_concat" target="_blank">repository
+  README</a>.</p>
 
   <footer>
     <p>
-      Audio Concatenator — Copyright 2026 Seth Johnston —
-      <a href="https://github.com/sethj/concat/blob/main/LICENSE">AGPL-3.0</a> —
-      Built with assistance from <a href="https://claude.ai">Claude</a> by Anthropic
+      Audio Concatenator &mdash; Copyright 2026 Seth Johnston &mdash;
+      <a href="https://github.com/rulingAnts/audio_concat/blob/main/LICENSE">AGPL-3.0</a>
+      &mdash; Built with assistance from
+      <a href="https://claude.ai">Claude</a> by Anthropic
     </p>
   </footer>
 
 </div><!-- .page -->
+
+<script>
+  /* ── Platform tabs ── */
+  function showTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  /* ── Download cards — populated from GitHub Releases API ── */
+  (async () => {
+    const REPO      = 'rulingAnts/audio_concat';
+    const API_URL   = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+    const CACHE_KEY = 'ac_latest_release';
+    const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+    function fmtSize(bytes) {
+      return bytes >= 1e6
+        ? Math.round(bytes / 1e6) + ' MB'
+        : Math.round(bytes / 1e3) + ' KB';
+    }
+
+    function fmtDate(iso) {
+      return new Date(iso).toLocaleDateString('en-US',
+        { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    async function fetchRelease() {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < CACHE_TTL) return data;
+        }
+      } catch (_) {}
+      const r = await fetch(API_URL);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+      } catch (_) {}
+      return data;
+    }
+
+    function wireButton(btnId, metaId, asset) {
+      const btn  = document.getElementById(btnId);
+      const meta = document.getElementById(metaId);
+      btn.href        = asset.browser_download_url;
+      btn.textContent = 'Download  ' + fmtSize(asset.size);
+      btn.classList.remove('loading');
+      if (meta) meta.textContent = asset.name;
+    }
+
+    try {
+      const rel = await fetchRelease();
+
+      const mac   = rel.assets.find(a => a.name.includes('macos')   && a.name.endsWith('.zip'));
+      const win   = rel.assets.find(a => a.name.includes('windows') && a.name.endsWith('.exe'));
+      const linux = rel.assets.find(a => a.name.includes('linux')   && a.name.endsWith('.AppImage'));
+
+      if (mac)   wireButton('dl-mac',   'meta-mac',   mac);
+      if (win)   wireButton('dl-win',   'meta-win',   win);
+      if (linux) wireButton('dl-linux', 'meta-linux', linux);
+
+      document.getElementById('release-line').innerHTML =
+        'Latest release: <strong>' + rel.tag_name + '</strong>' +
+        ' &ensp;&bull;&ensp; Released ' + fmtDate(rel.published_at) +
+        ' &ensp;&bull;&ensp; ' +
+        '<a href="https://github.com/' + REPO + '/releases" target="_blank">All releases &rarr;</a>';
+
+    } catch (err) {
+      console.warn('Could not fetch release info:', err);
+      ['dl-mac', 'dl-win', 'dl-linux'].forEach(id => {
+        const btn = document.getElementById(id);
+        btn.textContent = 'Download';
+        btn.href = 'https://github.com/' + REPO + '/releases/latest';
+        btn.classList.remove('loading');
+      });
+      document.getElementById('release-line').innerHTML =
+        'Could not fetch release info automatically. &ensp;&bull;&ensp; ' +
+        '<a href="https://github.com/' + REPO + '/releases/latest" target="_blank">' +
+        'Go to latest release &rarr;</a>';
+    }
+  })();
+</script>
+
 </body>
 </html>
