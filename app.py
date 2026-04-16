@@ -9,6 +9,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+try:
+    import yaml as _yaml
+    _HAS_YAML = True
+except ImportError:
+    _HAS_YAML = False
+
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -335,6 +341,11 @@ class SuffixOrderWidget(QGroupBox):
     def patterns(self) -> list[str]:
         return [self.pattern_list.item(i).text() for i in range(self.pattern_list.count())]
 
+    def set_patterns(self, patterns: list[str]):
+        self.pattern_list.clear()
+        for p in patterns:
+            self.pattern_list.addItem(p)
+
     def _add(self):
         text = self.add_input.text().strip()
         if not text:
@@ -491,6 +502,15 @@ class RegexLayerWidget(QWidget):
             "reverse": SORT_DIRECTIONS[self.dir_combo.currentIndex()][1],
         }
 
+    def set_config(self, config: dict):
+        self.pattern_edit.setText(config.get("pattern", ""))
+        self.group_spin.setValue(int(config.get("group", 1)))
+        mode = config.get("mode", "natural")
+        mode_idx = next((i for i, (_, v) in enumerate(REGEX_SORT_MODES) if v == mode), 0)
+        self.mode_combo.setCurrentIndex(mode_idx)
+        reverse = config.get("reverse", False)
+        self.dir_combo.setCurrentIndex(1 if reverse else 0)
+
 
 class RegexSortPanel(QWidget):
     """
@@ -587,6 +607,107 @@ class RegexSortPanel(QWidget):
                 layers.append(item.widget().layer_config())
         return layers
 
+    def set_layers(self, layer_configs: list[dict]):
+        # Remove all existing layers
+        while self.layers_layout.count():
+            item = self.layers_layout.takeAt(0)
+            if item and item.widget():
+                item.widget().deleteLater()
+        # Add new layers from config
+        for cfg in layer_configs:
+            layer = RegexLayerWidget()
+            layer.remove_requested.connect(lambda l=layer: self._remove_layer(l))
+            layer.move_up_requested.connect(lambda l=layer: self._move_layer(l, -1))
+            layer.move_down_requested.connect(lambda l=layer: self._move_layer(l, 1))
+            layer.set_config(cfg)
+            self.layers_layout.addWidget(layer)
+        # Always keep at least one layer
+        if self.layers_layout.count() == 0:
+            self._add_layer()
+
+
+# ---------------------------------------------------------------------------
+# Settings serialisation helpers
+# ---------------------------------------------------------------------------
+
+_VALID_SORT_MODES   = {"simple", "advanced"}
+_VALID_SORT_FIELDS  = {v for _, v in SORT_FIELDS}
+_VALID_DIRECTIONS   = {"ascending", "descending"}
+_VALID_SORT_AS      = {"natural", "numeric", "alpha"}
+
+
+def _ys(value) -> str:
+    """
+    Serialize a scalar to a YAML-safe inline string.
+
+    Uses pyyaml to handle quoting automatically, then takes only the first
+    output line — pyyaml sometimes appends a '...' document-end marker on a
+    second line that would corrupt inline comments.
+    """
+    if not _HAS_YAML:
+        return str(value)
+    raw = _yaml.dump(value, default_flow_style=True, allow_unicode=True)
+    return raw.splitlines()[0] if raw.strip() else ""
+
+
+def _build_settings_yaml(settings: dict) -> str:
+    """
+    Build a human-readable YAML string with per-field inline comments
+    explaining every valid option.  Values with a closed set of allowed
+    options include the full option list in their comment.
+    """
+    # Controlled-vocabulary values don't need YAML quoting; write them directly
+    # so the comment stays on the same line without quoting artefacts.
+    mode      = settings["sort_mode"]
+    field     = settings["sort_field"]
+    direction = settings["sort_direction"]
+
+    lines = [
+        "# Audio Concatenator — sort settings",
+        "# Edit freely with any text editor.",
+        "",
+        f"sort_mode: {mode}  # simple | advanced",
+        f"sort_field: {field}  # name | num | ctime | mtime | atime",
+        f"sort_direction: {direction}  # ascending | descending",
+        "",
+        "suffix_order:  # substrings or regex patterns that identify file suffixes;",
+        "               # one pattern per line — delete all entries (or write []) to disable.",
+        "               # Longer patterns are always tried first, so 'emph-ans-irt'",
+        "               # is never shadowed by the shorter 'ans-irt' regardless of order.",
+    ]
+
+    suffix = settings.get("suffix_order") or []
+    if suffix:
+        for p in suffix:
+            lines.append(f"  - {_ys(p)}")
+    else:
+        lines.append("  []")
+
+    lines += [
+        "",
+        "regex_layers:  # Advanced sort only — list of sort layers.",
+        "               # Layer 1 (top) is the primary sort key; lower layers break ties.",
+        "               # Delete all entries (or write []) when using Simple (GUI) sort.",
+    ]
+
+    layers = settings.get("regex_layers") or []
+    if layers:
+        for layer in layers:
+            lines += [
+                f"  - pattern: {_ys(layer['pattern'])}"
+                "  # Python regex — must contain at least one capture group  ( )",
+                f"    group: {layer['group']}"
+                "  # which capture group to sort by: 1, 2, 3, …",
+                f"    sort_as: {layer['sort_as']}"
+                "  # natural | numeric | alpha",
+                f"    direction: {layer['direction']}"
+                "  # ascending | descending",
+            ]
+    else:
+        lines.append("  []")
+
+    return "\n".join(lines) + "\n"
+
 
 # ---------------------------------------------------------------------------
 # Main window
@@ -637,6 +758,14 @@ class MainWindow(QMainWindow):
         mode_row.addWidget(self._radio_simple)
         mode_row.addWidget(self._radio_adv)
         mode_row.addStretch()
+        load_settings_btn = QPushButton("Load Settings…")
+        load_settings_btn.setToolTip("Load sort settings from a YAML file")
+        load_settings_btn.clicked.connect(self._load_settings)
+        save_settings_btn = QPushButton("Save Settings…")
+        save_settings_btn.setToolTip("Save current sort settings to a YAML file")
+        save_settings_btn.clicked.connect(self._save_settings)
+        mode_row.addWidget(load_settings_btn)
+        mode_row.addWidget(save_settings_btn)
         root.addLayout(mode_row)
 
         # ── Stacked sort panels ──────────────────────────────────────────────
@@ -679,6 +808,216 @@ class MainWindow(QMainWindow):
         root.addLayout(join_row)
 
         self.statusBar().showMessage("Ready")
+
+    # ── Sort settings save / load ────────────────────────────────────────────
+
+    def _collect_settings(self) -> dict:
+        """Collect current sort settings into a plain dict."""
+        mode = "simple" if self._radio_simple.isChecked() else "advanced"
+        field = self.gui_panel.sort_field
+        direction = "descending" if self.gui_panel.sort_reverse else "ascending"
+        suffix = self.gui_panel.suffix_widget.patterns()
+
+        raw_layers = self.regex_panel.get_layers()
+        layers_out = []
+        for l in raw_layers:
+            layers_out.append({
+                "pattern":   l["pattern"],
+                "group":     l["group"],
+                "sort_as":   l["mode"],
+                "direction": "descending" if l["reverse"] else "ascending",
+            })
+
+        return {
+            "sort_mode":       mode,
+            "sort_field":      field,
+            "sort_direction":  direction,
+            "suffix_order":    suffix,
+            "regex_layers":    layers_out,
+        }
+
+    def _apply_settings(self, data: dict):
+        """
+        Apply a settings dict to the UI.
+
+        Each field is applied independently.  Invalid values are skipped and
+        collected into a warning shown at the end, so a single bad entry never
+        prevents the rest of the file from loading.
+        """
+        warnings: list[str] = []
+
+        # ── sort_mode ────────────────────────────────────────────────────────
+        mode = data.get("sort_mode")
+        if mode is not None:
+            if mode in _VALID_SORT_MODES:
+                if mode == "advanced":
+                    self._radio_adv.setChecked(True)
+                else:
+                    self._radio_simple.setChecked(True)
+            else:
+                warnings.append(
+                    f"sort_mode: '{mode}' is not valid — must be 'simple' or 'advanced'. Skipped."
+                )
+
+        # ── sort_field ───────────────────────────────────────────────────────
+        field = data.get("sort_field")
+        if field is not None:
+            if field in _VALID_SORT_FIELDS:
+                idx = next((i for i, (_, v) in enumerate(SORT_FIELDS) if v == field), None)
+                if idx is not None:
+                    self.gui_panel.field_combo.setCurrentIndex(idx)
+            else:
+                warnings.append(
+                    f"sort_field: '{field}' is not valid — "
+                    f"must be one of: {', '.join(v for _, v in SORT_FIELDS)}. Skipped."
+                )
+
+        # ── sort_direction ───────────────────────────────────────────────────
+        direction = data.get("sort_direction")
+        if direction is not None:
+            if direction in _VALID_DIRECTIONS:
+                self.gui_panel.dir_combo.setCurrentIndex(1 if direction == "descending" else 0)
+            else:
+                warnings.append(
+                    f"sort_direction: '{direction}' is not valid — "
+                    f"must be 'ascending' or 'descending'. Skipped."
+                )
+
+        # ── suffix_order ─────────────────────────────────────────────────────
+        suffix = data.get("suffix_order")
+        if suffix is not None:
+            if isinstance(suffix, list):
+                self.gui_panel.suffix_widget.set_patterns([str(p) for p in suffix])
+            else:
+                warnings.append(
+                    f"suffix_order: expected a list of strings, got {type(suffix).__name__}. Skipped."
+                )
+
+        # ── regex_layers ─────────────────────────────────────────────────────
+        layers = data.get("regex_layers")
+        if layers is not None:
+            if not isinstance(layers, list):
+                warnings.append(
+                    f"regex_layers: expected a list, got {type(layers).__name__}. Skipped."
+                )
+            else:
+                converted: list[dict] = []
+                for i, raw in enumerate(layers):
+                    if not isinstance(raw, dict):
+                        warnings.append(f"regex_layers[{i}]: expected a dict. Skipped.")
+                        continue
+                    cfg: dict = {}
+
+                    # pattern — accept any string; warn if it won't compile
+                    pat = raw.get("pattern", "")
+                    pat = str(pat) if pat is not None else ""
+                    try:
+                        re.compile(pat)
+                    except re.error as exc:
+                        warnings.append(
+                            f"regex_layers[{i}].pattern: '{pat}' is not a valid regex "
+                            f"({exc}). Loaded anyway — fix before applying sort."
+                        )
+                    cfg["pattern"] = pat
+
+                    # group — integer 1–9
+                    raw_group = raw.get("group", 1)
+                    try:
+                        g = int(raw_group)
+                        if not (1 <= g <= 9):
+                            raise ValueError(f"out of range 1–9")
+                        cfg["group"] = g
+                    except (ValueError, TypeError):
+                        warnings.append(
+                            f"regex_layers[{i}].group: '{raw_group}' is not valid — "
+                            f"must be an integer 1–9. Using 1."
+                        )
+                        cfg["group"] = 1
+
+                    # sort_as
+                    sort_as = str(raw.get("sort_as", "natural"))
+                    if sort_as in _VALID_SORT_AS:
+                        cfg["mode"] = sort_as
+                    else:
+                        warnings.append(
+                            f"regex_layers[{i}].sort_as: '{sort_as}' is not valid — "
+                            f"must be 'natural', 'numeric', or 'alpha'. Using 'natural'."
+                        )
+                        cfg["mode"] = "natural"
+
+                    # direction
+                    dir_val = str(raw.get("direction", "ascending"))
+                    if dir_val in _VALID_DIRECTIONS:
+                        cfg["reverse"] = dir_val == "descending"
+                    else:
+                        warnings.append(
+                            f"regex_layers[{i}].direction: '{dir_val}' is not valid — "
+                            f"must be 'ascending' or 'descending'. Using 'ascending'."
+                        )
+                        cfg["reverse"] = False
+
+                    converted.append(cfg)
+
+                if converted:
+                    self.regex_panel.set_layers(converted)
+
+        # ── report any problems ───────────────────────────────────────────────
+        if warnings:
+            QMessageBox.warning(
+                self, "Settings loaded with warnings",
+                "Some values were skipped or substituted:\n\n"
+                + "\n".join(f"  \u2022 {w}" for w in warnings),
+            )
+
+    def _save_settings(self):
+        if not _HAS_YAML:
+            QMessageBox.warning(
+                self, "PyYAML not installed",
+                "Install pyyaml to save/load settings:\n\n  pip install pyyaml",
+            )
+            return
+
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save sort settings", "sort_settings.yaml",
+            "YAML files (*.yaml *.yml);;All files (*)",
+        )
+        if not path:
+            return
+        if not path.lower().endswith((".yaml", ".yml")):
+            path += ".yaml"
+
+        settings = self._collect_settings()
+        try:
+            Path(path).write_text(_build_settings_yaml(settings), encoding="utf-8")
+            self.statusBar().showMessage(f"Settings saved: {path}")
+        except OSError as exc:
+            QMessageBox.critical(self, "Save failed", str(exc))
+
+    def _load_settings(self):
+        if not _HAS_YAML:
+            QMessageBox.warning(
+                self, "PyYAML not installed",
+                "Install pyyaml to save/load settings:\n\n  pip install pyyaml",
+            )
+            return
+
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load sort settings", "",
+            "YAML files (*.yaml *.yml);;All files (*)",
+        )
+        if not path:
+            return
+        try:
+            text = Path(path).read_text(encoding="utf-8")
+            data = _yaml.safe_load(text)
+        except (OSError, _yaml.YAMLError) as exc:
+            QMessageBox.critical(self, "Load failed", str(exc))
+            return
+        if not isinstance(data, dict):
+            QMessageBox.warning(self, "Invalid file", "The file does not contain a valid settings dict.")
+            return
+        self._apply_settings(data)
+        self.statusBar().showMessage(f"Settings loaded: {path}")
 
     # ── Slots ────────────────────────────────────────────────────────────────
 
