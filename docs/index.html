@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Concatenator — Documentation</title>
+  <style>
+    :root {
+      --accent:   #2563eb;
+      --accent-d: #1d4ed8;
+      --bg:       #ffffff;
+      --bg2:      #f8fafc;
+      --border:   #e2e8f0;
+      --text:     #1e293b;
+      --muted:    #64748b;
+      --code-bg:  #f1f5f9;
+      --green:    #16a34a;
+      --red:      #dc2626;
+      --max-w:    860px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px; line-height: 1.65;
+      color: var(--text); background: var(--bg);
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--accent); color: #fff;
+      padding: 0 1.5rem;
+      display: flex; align-items: center; gap: 2rem;
+      height: 52px;
+    }
+    nav .brand { font-weight: 700; font-size: 1.1rem; white-space: nowrap; }
+    nav a { color: rgba(255,255,255,.85); text-decoration: none; font-size: .9rem; }
+    nav a:hover { color: #fff; }
+
+    /* ── Layout ── */
+    .page { max-width: var(--max-w); margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    /* ── Hero ── */
+    .hero {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 2.5rem 2rem 2rem;
+      margin-bottom: 2.5rem;
+    }
+    .hero h1 { font-size: 2rem; margin-bottom: .4rem; }
+    .hero p  { color: var(--muted); font-size: 1.05rem; max-width: 580px; }
+    .badge-row { margin-top: 1.2rem; display: flex; gap: .6rem; flex-wrap: wrap; }
+    .badge {
+      display: inline-block; padding: .2rem .7rem;
+      border-radius: 999px; font-size: .78rem; font-weight: 600;
+    }
+    .badge-blue  { background: #dbeafe; color: var(--accent-d); }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-gray  { background: #f1f5f9; color: var(--muted); }
+
+    /* ── Sections ── */
+    h2 {
+      font-size: 1.4rem; margin: 2.5rem 0 .8rem;
+      padding-bottom: .4rem; border-bottom: 2px solid var(--border);
+    }
+    h3 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; color: var(--accent-d); }
+    p  { margin-bottom: .9rem; }
+    ul, ol { padding-left: 1.4rem; margin-bottom: .9rem; }
+    li { margin-bottom: .3rem; }
+
+    /* ── Code ── */
+    code {
+      font-family: "SF Mono", Consolas, "Liberation Mono", monospace;
+      font-size: .88em;
+      background: var(--code-bg); padding: .15em .4em;
+      border-radius: 4px;
+    }
+    pre {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1rem 1.2rem;
+      overflow-x: auto; margin: .8rem 0 1.2rem;
+      font-size: .88rem; line-height: 1.55;
+    }
+    pre code { background: none; padding: 0; }
+
+    /* ── Tables ── */
+    table {
+      width: 100%; border-collapse: collapse;
+      margin: .8rem 0 1.4rem; font-size: .92rem;
+    }
+    th {
+      background: var(--bg2); text-align: left;
+      padding: .5rem .8rem; border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    td { padding: .45rem .8rem; border: 1px solid var(--border); }
+    tr:nth-child(even) td { background: var(--bg2); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: #eff6ff; padding: .8rem 1rem;
+      border-radius: 0 6px 6px 0; margin: 1rem 0 1.2rem;
+    }
+    .callout.tip  { border-color: var(--green); background: #f0fdf4; }
+    .callout.warn { border-color: #f59e0b; background: #fffbeb; }
+    .callout strong { display: block; margin-bottom: .2rem; }
+
+    /* ── Layer diagram ── */
+    .layer-box {
+      border: 1px solid var(--border); border-radius: 8px;
+      margin: .8rem 0 1.2rem; overflow: hidden;
+    }
+    .layer-row {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .55rem .9rem; border-bottom: 1px solid var(--border);
+      font-size: .88rem; font-family: "SF Mono", monospace;
+    }
+    .layer-row:last-child { border-bottom: none; }
+    .layer-num {
+      background: var(--accent); color: #fff;
+      border-radius: 4px; padding: .1rem .45rem;
+      font-size: .78rem; font-weight: 700; white-space: nowrap;
+    }
+    .layer-pat { flex: 1; color: var(--text); }
+    .layer-meta { color: var(--muted); font-size: .82rem; }
+
+    /* ── Status indicators ── */
+    .ok  { color: var(--green); font-weight: 700; }
+    .err { color: var(--red);   font-weight: 700; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 0 0; margin-top: 3rem;
+      color: var(--muted); font-size: .88rem;
+    }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">Audio Concatenator</span>
+  <a href="#quickstart">Quick Start</a>
+  <a href="#simple">Simple Sort</a>
+  <a href="#advanced">Advanced Sort</a>
+  <a href="#regex-reference">Regex Reference</a>
+  <a href="#faq">FAQ</a>
+</nav>
+
+<div class="page">
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <h1>Audio Concatenator</h1>
+    <p>Load a folder of audio files, arrange them in any order, and join them
+       into a single WAV with a click marker between each file.</p>
+    <div class="badge-row">
+      <span class="badge badge-blue">PySide6 GUI</span>
+      <span class="badge badge-green">Windows · macOS · Linux</span>
+      <span class="badge badge-gray">Python 3.10+</span>
+      <span class="badge badge-gray">AGPL-3.0</span>
+    </div>
+  </div>
+
+  <!-- ── Quick Start ── -->
+  <h2 id="quickstart">Quick Start</h2>
+
+  <ol>
+    <li><strong>Install dependencies</strong>
+      <pre><code>pip install PySide6 pydub numpy</code></pre>
+      You also need <strong>ffmpeg</strong> on your system PATH, or place a static
+      binary in the <code>bin/</code> folder next to the app (see
+      <a href="#ffmpeg">FFmpeg setup</a>).
+    </li>
+    <li><strong>Run the app</strong>
+      <pre><code>python app.py</code></pre>
+    </li>
+    <li>Click <strong>Load Folder…</strong> and choose a folder of audio files.</li>
+    <li>Arrange the files — drag rows to reorder, or use the sort controls.</li>
+    <li>Choose an output path and bit depth, then click <strong>Join Files</strong>.</li>
+  </ol>
+
+  <!-- ── Interface overview ── -->
+  <h2 id="interface">Interface Overview</h2>
+
+  <table>
+    <tr><th>Section</th><th>What it does</th></tr>
+    <tr>
+      <td><strong>Load Folder…</strong></td>
+      <td>Opens a folder picker. All audio files found inside are loaded into
+          the list, sorted alphabetically by default.</td>
+    </tr>
+    <tr>
+      <td><strong>File list</strong></td>
+      <td>The join order. Drag rows to rearrange.
+          Shift+Click for contiguous selection;
+          Ctrl/Cmd+Click to toggle individual items.
+          Drag a multi-selection to move the whole group at once.</td>
+    </tr>
+    <tr>
+      <td><strong>Sort mode</strong></td>
+      <td>Switch between <em>Simple (GUI)</em> and <em>Advanced (Regex)</em>
+          sort controls. Only one is active at a time.</td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>Path for the joined WAV. Auto-suggested as
+          <code>{folder}_joined.wav</code> next to the source folder.</td>
+    </tr>
+    <tr>
+      <td><strong>Bit depth</strong></td>
+      <td>16-bit (default, CD quality), 24-bit (studio), or 32-bit.
+          All input formats are resampled to 44 100 Hz mono before joining.</td>
+    </tr>
+    <tr>
+      <td><strong>Join Files</strong></td>
+      <td>Concatenates the files in list order with a 5 ms click + 500 ms
+          silence on each side between every pair of files. Runs in the
+          background; the UI stays responsive.</td>
+    </tr>
+  </table>
+
+  <!-- ── Simple sort ── -->
+  <h2 id="simple">Simple Sort Mode</h2>
+
+  <p>The <strong>Simple (GUI)</strong> radio button activates the standard sort
+  controls. Choose a sort field and direction, then click
+  <strong>Apply Sort</strong>.</p>
+
+  <table>
+    <tr><th>Field</th><th>Sorts by</th></tr>
+    <tr><td>Name (alphabetical)</td><td>Filename, A→Z or Z→A</td></tr>
+    <tr><td>Name (numerical)</td><td>Natural/numeric order — <code>track2</code> before <code>track10</code></td></tr>
+    <tr><td>Date created</td><td>File creation time (birth time on macOS)</td></tr>
+    <tr><td>Date modified</td><td>Last modification time</td></tr>
+    <tr><td>Date accessed</td><td>Last access time</td></tr>
+  </table>
+
+  <p>Sorting only reorders what is already in the list. You can apply multiple
+  sorts sequentially, or mix sorting with manual drag-and-drop.</p>
+
+  <h3 id="suffix-order">Suffix Order (for Dekereke databases)</h3>
+
+  <p>The <strong>Suffix Order</strong> panel lets you define a custom ordering
+  for files that share a base name but differ by a suffix. This is designed for
+  <a href="https://dekereke.com" target="_blank">Dekereke</a> databases, where
+  a stimulus entry like <code>0001</code> produces files such as
+  <code>0001-ynq-irt.wav</code>, <code>0001-ans-irt.wav</code>, etc.</p>
+
+  <p><strong>How to use it:</strong></p>
+  <ol>
+    <li>Type each suffix substring (or regex pattern) into the input field and
+        click <strong>Add</strong>, or press Enter. Add one entry per suffix
+        variant.</li>
+    <li>Drag the entries to set their priority order — the file containing the
+        first matching entry in the list will sort first within its base group.</li>
+    <li>Click <strong>Apply Suffix Order</strong>.</li>
+  </ol>
+
+  <p><strong>Example</strong> — for files numbered 0001–0006, each with seven
+  suffix variants:</p>
+
+  <pre><code>Suffix list (in desired order):
+  ynq-irt
+  whq-irt
+  ans-irt
+  emphq-irt
+  emph-ans-irt
+  cntr-foc-irt
+  cntr-top-irt</code></pre>
+
+  <p>After clicking Apply Suffix Order, the file list becomes:</p>
+  <pre><code>0001-ynq-irt.wav
+0001-whq-irt.wav
+0001-ans-irt.wav
+0001-emphq-irt.wav
+0001-emph-ans-irt.wav
+0001-cntr-foc-irt.wav
+0001-cntr-top-irt.wav
+0002-ynq-irt.wav
+0002-whq-irt.wav
+…</code></pre>
+
+  <div class="callout tip">
+    <strong>Overlapping patterns handled automatically</strong>
+    The app always tries the <em>longest</em> pattern string first when
+    matching a filename. This means <code>emph-ans-irt</code> is matched
+    before <code>ans-irt</code> even if <code>ans-irt</code> appears higher
+    in your list — no special ordering of the entries is required for
+    disambiguation.
+  </div>
+
+  <p>Entries can be plain substrings <em>or</em> full Python regex patterns.
+  If you type an invalid regex, the app auto-escapes it and treats it as a
+  literal string.</p>
+
+  <!-- ── Advanced sort ── -->
+  <h2 id="advanced">Advanced Sort Mode (Regex)</h2>
+
+  <p>Switch to <strong>Advanced (Regex)</strong> to sort by text extracted
+  directly from filenames using regular expressions. This mode replaces the
+  Simple sort entirely — use it when the GUI sort fields are not flexible
+  enough for your naming convention.</p>
+
+  <h3>What is a regex?</h3>
+
+  <p>A <em>regular expression</em> (regex) is a pattern that describes text.
+  The app uses Python's regex engine. You don't need to be an expert — the
+  most useful concept here is the <strong>capture group</strong>: any text
+  wrapped in <code>( )</code> parentheses is "captured" and used as the sort
+  key.</p>
+
+  <pre><code>Pattern:    ^(\d+)
+Filename:   0042-ans-irt.wav
+Captured:   0042   ← this value is used to sort the file</code></pre>
+
+  <div class="callout tip">
+    <strong>Tip — Ask an AI to write your regex</strong>
+    Not sure how to write a pattern? Paste a few example filenames into
+    Claude, ChatGPT, or another AI assistant and ask:
+    <em>"Write a Python regex with a capture group that extracts [the part
+    I want to sort by] from these filenames."</em>
+  </div>
+
+  <h3>The layer system</h3>
+
+  <p>Each row in the Advanced sort panel is a <strong>sort layer</strong>.
+  Layers work like columns in a spreadsheet sort:</p>
+
+  <ul>
+    <li><strong>Layer 1</strong> (top) is the <em>primary</em> sort key —
+        it has the highest priority.</li>
+    <li><strong>Layer 2</strong> breaks ties within groups that are equal
+        under Layer 1.</li>
+    <li><strong>Layer 3</strong> breaks ties within groups equal under both
+        Layer 1 and Layer 2, and so on.</li>
+  </ul>
+
+  <p>Use <strong>▲ / ▼</strong> to reorder layers. Click
+  <strong>+ Add Layer</strong> to add a new one.  The minimum is one layer.</p>
+
+  <div class="layer-box">
+    <div class="layer-row">
+      <span class="layer-num">Layer 1</span>
+      <span class="layer-pat">^(\d+)</span>
+      <span class="layer-meta">Numeric · Ascending</span>
+    </div>
+    <div class="layer-row">
+      <span class="layer-num">Layer 2</span>
+      <span class="layer-pat">-(\w+-irt)\.</span>
+      <span class="layer-meta">Natural text · Ascending</span>
+    </div>
+  </div>
+
+  <p><em>The two-layer example above replicates the Suffix Order result: Layer 1
+  groups files by their leading number; Layer 2 sub-sorts them by suffix.</em></p>
+
+  <h3>Controls per layer</h3>
+
+  <table>
+    <tr><th>Control</th><th>What it does</th></tr>
+    <tr>
+      <td><strong>▲ / ▼</strong></td>
+      <td>Move the layer up (higher priority) or down (lower priority).</td>
+    </tr>
+    <tr>
+      <td><strong>Pattern</strong></td>
+      <td>A Python regex containing at least one capture group <code>( )</code>.
+          A <span class="ok">✓</span> appears when the pattern is valid;
+          <span class="err">✗</span> appears (with error tooltip) when it is not.</td>
+    </tr>
+    <tr>
+      <td><strong>Grp</strong></td>
+      <td>Which capture group to sort by. Group 1 is the first
+          <code>( )</code>, group 2 is the second, etc. Default: 1.</td>
+    </tr>
+    <tr>
+      <td><strong>Sort as</strong></td>
+      <td>How to interpret the captured text (see table below).</td>
+    </tr>
+    <tr>
+      <td><strong>Ascending / Descending</strong></td>
+      <td>Sort direction for this layer.</td>
+    </tr>
+    <tr>
+      <td><strong>✕</strong></td>
+      <td>Remove this layer (minimum one layer always remains).</td>
+    </tr>
+  </table>
+
+  <h3>Sort-as modes</h3>
+
+  <table>
+    <tr><th>Mode</th><th>Behaviour</th><th>Example</th></tr>
+    <tr>
+      <td><strong>Natural text</strong></td>
+      <td>String sort, but runs of digits are compared numerically.
+          Recommended for most filenames.</td>
+      <td><code>track2</code> &lt; <code>track10</code></td>
+    </tr>
+    <tr>
+      <td><strong>Numeric</strong></td>
+      <td>Parse the captured text as a number (float). Use when the
+          capture group contains only digits or a decimal value.</td>
+      <td><code>120.5</code> &lt; <code>130</code></td>
+    </tr>
+    <tr>
+      <td><strong>Alphabetical</strong></td>
+      <td>Plain case-insensitive A–Z string comparison.
+          Digits sort as characters, not numbers.</td>
+      <td><code>track10</code> &lt; <code>track2</code></td>
+    </tr>
+  </table>
+
+  <h3>Unmatched files</h3>
+
+  <p>If a file's name does not match a layer's pattern, that file is sorted
+  <em>after</em> all files that did match — but it still keeps its position
+  relative to other unmatched files, and is still sorted correctly by any
+  higher-priority layer it did match.</p>
+
+  <!-- ── Regex reference ── -->
+  <h2 id="regex-reference">Regex Quick Reference</h2>
+
+  <p>These are the building blocks you'll use most often. Every example below
+  is a complete pattern ready to paste into the Pattern field.</p>
+
+  <table>
+    <tr><th>Pattern</th><th>Captures</th><th>Example filename → captured</th></tr>
+    <tr>
+      <td><code>^(\d+)</code></td>
+      <td>Leading digits at the start of the filename</td>
+      <td><code>0042-ans-irt.wav</code> → <code>0042</code></td>
+    </tr>
+    <tr>
+      <td><code>-(\w+-irt)\.</code></td>
+      <td>A hyphen-separated suffix ending in <code>-irt</code></td>
+      <td><code>0001-ynq-irt.wav</code> → <code>ynq-irt</code></td>
+    </tr>
+    <tr>
+      <td><code>_(\d{4}-\d{2}-\d{2})</code></td>
+      <td>A date in <code>YYYY-MM-DD</code> format preceded by an underscore</td>
+      <td><code>rec_2024-03-15.wav</code> → <code>2024-03-15</code></td>
+    </tr>
+    <tr>
+      <td><code>(\d{2,3})bpm</code></td>
+      <td>A 2–3-digit BPM value</td>
+      <td><code>loop_128bpm_A.wav</code> → <code>128</code></td>
+    </tr>
+    <tr>
+      <td><code>_([A-G][#b]?)_</code></td>
+      <td>A musical key between underscores</td>
+      <td><code>chord_Eb_maj.wav</code> → <code>Eb</code></td>
+    </tr>
+    <tr>
+      <td><code>(\d+)$</code></td>
+      <td>Trailing digits at the end of the stem (before the extension)</td>
+      <td><code>take007.wav</code> → <code>007</code></td>
+    </tr>
+    <tr>
+      <td><code>-(spkr\d+)-</code></td>
+      <td>A speaker ID like <code>spkr03</code></td>
+      <td><code>item01-spkr03-cond2.wav</code> → <code>spkr03</code></td>
+    </tr>
+  </table>
+
+  <h3>Regex syntax cheat sheet</h3>
+
+  <table>
+    <tr><th>Symbol</th><th>Meaning</th></tr>
+    <tr><td><code>( )</code></td><td>Capture group — the text inside is used as the sort key</td></tr>
+    <tr><td><code>\d</code></td><td>Any digit (0–9)</td></tr>
+    <tr><td><code>\w</code></td><td>Any word character (letters, digits, underscore)</td></tr>
+    <tr><td><code>.</code></td><td>Any single character (escape as <code>\.</code> for a literal dot)</td></tr>
+    <tr><td><code>+</code></td><td>One or more of the preceding item</td></tr>
+    <tr><td><code>*</code></td><td>Zero or more of the preceding item</td></tr>
+    <tr><td><code>{n,m}</code></td><td>Between <em>n</em> and <em>m</em> of the preceding item</td></tr>
+    <tr><td><code>^</code></td><td>Start of the string</td></tr>
+    <tr><td><code>$</code></td><td>End of the string</td></tr>
+    <tr><td><code>-</code></td><td>Literal hyphen (outside a character class)</td></tr>
+    <tr><td><code>[abc]</code></td><td>Any one of a, b, or c</td></tr>
+    <tr><td><code>[A-Z]</code></td><td>Any uppercase letter</td></tr>
+    <tr><td><code>(?:…)</code></td><td>Non-capturing group (groups without counting toward Grp number)</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <strong>Testing your pattern</strong>
+    The <span class="ok">✓</span> / <span class="err">✗</span> indicator only
+    checks that the pattern is <em>syntactically valid</em> — it does not
+    confirm it matches your filenames. Always click
+    <strong>Apply Regex Sort</strong> and inspect the resulting file order
+    before clicking <strong>Join Files</strong>.
+  </div>
+
+  <!-- ── Multi-layer worked example ── -->
+  <h2 id="worked-example">Worked Example — Dekereke Database</h2>
+
+  <p>Suppose your folder contains files named:</p>
+  <pre><code>0001-ans-irt.wav      0002-ans-irt.wav      0003-ans-irt.wav
+0001-ynq-irt.wav      0002-ynq-irt.wav      0003-ynq-irt.wav
+0001-cntr-foc-irt.wav 0002-cntr-foc-irt.wav 0003-cntr-foc-irt.wav</code></pre>
+
+  <p>You want the output order to be: all variants of 0001 first (ynq, ans,
+  cntr-foc), then all of 0002, then 0003.</p>
+
+  <h3>Option A — Suffix Order panel (Simple mode, recommended)</h3>
+  <ol>
+    <li>Open <strong>Simple (GUI)</strong> mode.</li>
+    <li>In the Suffix Order box, add entries in this order:
+      <pre><code>ynq-irt
+ans-irt
+cntr-foc-irt</code></pre>
+    </li>
+    <li>Click <strong>Apply Suffix Order</strong>.</li>
+  </ol>
+
+  <h3>Option B — Advanced (Regex) mode</h3>
+  <ol>
+    <li>Open <strong>Advanced (Regex)</strong> mode.</li>
+    <li>Set up two layers:
+      <div class="layer-box">
+        <div class="layer-row">
+          <span class="layer-num">Layer 1</span>
+          <span class="layer-pat">^(\d+)</span>
+          <span class="layer-meta">Numeric · Ascending — groups by base number</span>
+        </div>
+        <div class="layer-row">
+          <span class="layer-num">Layer 2</span>
+          <span class="layer-pat">-(\w+-irt)\.</span>
+          <span class="layer-meta">Alphabetical · Ascending — sub-sorts suffix</span>
+        </div>
+      </div>
+      <p>Note: Alphabetical gives <code>ans</code> → <code>cntr-foc</code> → <code>ynq</code>.
+         To get a custom suffix order instead, use Option A.</p>
+    </li>
+    <li>Click <strong>Apply Regex Sort</strong>.</li>
+  </ol>
+
+  <!-- ── Bit depth ── -->
+  <h2 id="bitdepth">Bit Depth</h2>
+
+  <table>
+    <tr><th>Setting</th><th>Sample width</th><th>Use case</th></tr>
+    <tr>
+      <td><strong>16-bit</strong> (default)</td>
+      <td>2 bytes / sample</td>
+      <td>CD quality, broadest compatibility, smallest file size</td>
+    </tr>
+    <tr>
+      <td><strong>24-bit</strong></td>
+      <td>3 bytes / sample</td>
+      <td>Studio / archival quality</td>
+    </tr>
+    <tr>
+      <td><strong>32-bit</strong></td>
+      <td>4 bytes / sample</td>
+      <td>Post-production, maximum headroom before mixdown</td>
+    </tr>
+  </table>
+
+  <p>All input files are normalised to <strong>44 100 Hz mono</strong>
+  at the chosen bit depth before being joined. The click marker between each
+  file is a 5 ms 2 kHz sine burst with 500 ms of silence on each side.</p>
+
+  <!-- ── FFmpeg ── -->
+  <h2 id="ffmpeg">FFmpeg Setup</h2>
+
+  <p>The app uses <a href="https://ffmpeg.org" target="_blank">ffmpeg</a> (via
+  pydub) to decode non-WAV formats. It looks in two places, in order:</p>
+
+  <ol>
+    <li><strong>Bundled binary</strong> — <code>bin/ffmpeg</code> (or
+        <code>bin/ffmpeg.exe</code> on Windows) placed next to
+        <code>app.py</code>.</li>
+    <li><strong>System PATH</strong> — any <code>ffmpeg</code> installed
+        system-wide (e.g. via <code>brew install ffmpeg</code> on macOS or
+        the installer on Windows).</li>
+  </ol>
+
+  <p>If neither is found, the app shows an error dialog at startup.
+  See <code>bin/README.md</code> in the repository for download links and the
+  PyInstaller <code>.spec</code> snippet for bundling.</p>
+
+  <!-- ── FAQ ── -->
+  <h2 id="faq">FAQ</h2>
+
+  <h3>What audio formats are supported as input?</h3>
+  <p>WAV, MP3, FLAC, AIFF/AIF, OGG, M4A, MP4. Any format pydub/ffmpeg can
+  decode will work. The output is always WAV.</p>
+
+  <h3>Can I manually reorder files after applying a sort?</h3>
+  <p>Yes. Sort operations only rearrange the list — you can drag items freely
+  before or after applying any sort. The list order at the moment you click
+  <strong>Join Files</strong> is what gets used.</p>
+
+  <h3>What if a file doesn't match any suffix pattern?</h3>
+  <p>In Suffix Order mode, unmatched files sort after all matched files within
+  their base group, using natural filename order. In Advanced Regex mode,
+  unmatched files sort after matched files for that layer.</p>
+
+  <h3>My regex is marked ✓ but the sort looks wrong. Why?</h3>
+  <p>The ✓ only confirms the pattern is syntactically valid, not that it
+  matches your filenames. Check that your capture group <code>( )</code> is
+  in the right place and that the <strong>Grp</strong> number matches the
+  group you intend. You can test patterns at
+  <a href="https://regex101.com" target="_blank">regex101.com</a> — choose
+  "Python" flavour.</p>
+
+  <h3>Can I build a standalone portable app?</h3>
+  <p>Yes, via PyInstaller:</p>
+  <pre><code>pip install pyinstaller
+pyinstaller --onefile app.py</code></pre>
+  <p>Drop <code>ffmpeg</code> into <code>bin/</code> before packaging to bundle
+  it. See <code>bin/README.md</code> for the full <code>.spec</code> snippet.</p>
+
+  <h3>The join is slow for large folders. Is that normal?</h3>
+  <p>Decoding, resampling, and writing audio is CPU-bound and scales with total
+  audio duration. The join runs on a background thread so the UI stays
+  responsive. A folder of 50 short WAV clips should finish in a few seconds;
+  long MP3s decoded through ffmpeg take longer.</p>
+
+  <footer>
+    <p>
+      Audio Concatenator — Copyright 2026 Seth Johnston —
+      <a href="https://github.com/sethj/concat/blob/main/LICENSE">AGPL-3.0</a> —
+      Built with assistance from <a href="https://claude.ai">Claude</a> by Anthropic
+    </p>
+  </footer>
+
+</div><!-- .page -->
+</body>
+</html>
