@@ -110,13 +110,15 @@ def _sorted_paths(paths: list[str], field: str, reverse: bool) -> list[str]:
 
 def _apply_suffix_order(paths: list[str], patterns: list[str]) -> list[str]:
     """
-    Sort by (base_key, suffix_rank).
+    Group files by base name, sort groups by natural key, sort within each
+    group by the pattern's rank in the user's list.
 
-    Matching tries the longest pattern string first (Option A) so that a more
-    specific pattern like 'emph-ans-irt' is always matched before the shorter
-    'ans-irt', regardless of their position in the user's list.
+    This iterates over every base soundfile in the folder (0001, 0002, 0003…)
+    and applies the same suffix ordering to each one.
 
-    User list order determines suffix_rank: index 0 = highest priority.
+    Longest patterns are tried first when matching so that a specific pattern
+    like 'emph-ans-irt' is never shadowed by the shorter 'ans-irt', regardless
+    of their position in the user's list.
     """
     if not patterns:
         return paths
@@ -130,21 +132,41 @@ def _apply_suffix_order(paths: list[str], patterns: list[str]) -> list[str]:
             rx = re.compile(re.escape(pat))
         compiled.append((rank, len(pat), rx))
 
-    # Longest pattern string first for matching.
+    # For matching: try longest pattern string first.
     by_length = sorted(compiled, key=lambda x: x[1], reverse=True)
 
-    def sort_key(path: str):
-        stem = Path(path).stem
+    def classify(stem: str) -> tuple[str, int]:
+        """Return (base_name, suffix_rank) for a filename stem."""
         for rank, _, rx in by_length:
             m = rx.search(stem)
             if m:
                 pre  = stem[:m.start()].rstrip("-_")
                 post = stem[m.end():].lstrip("-_")
                 base = pre + ("-" if pre and post else "") + post
-                return (_natural_key(base), rank)
-        return (_natural_key(stem), len(patterns))
+                return base, rank
+        # No pattern matched — use the full stem as the base key,
+        # rank beyond all named patterns so it sorts last in its group.
+        return stem, len(patterns)
 
-    return sorted(paths, key=sort_key)
+    # Build one group per unique base, preserving first-seen insertion order
+    # so that groups whose base didn't sort cleanly still behave predictably.
+    groups: dict[str, list[tuple[int, str]]] = {}
+    for path in paths:
+        base, rank = classify(Path(path).stem)
+        if base not in groups:
+            groups[base] = []
+        groups[base].append((rank, path))
+
+    # Sort base names with the same natural key used for filenames
+    # (so 0002 < 0010, not 0002 < 0003 < … via lexical order).
+    sorted_bases = sorted(groups.keys(), key=_natural_key)
+
+    # Within each group sort by suffix rank; ties keep original list order
+    # because Python's sort is stable.
+    result: list[str] = []
+    for base in sorted_bases:
+        result.extend(path for _, path in sorted(groups[base], key=lambda x: x[0]))
+    return result
 
 
 def _apply_single_regex_layer(paths: list[str], pattern: str, group: int,
